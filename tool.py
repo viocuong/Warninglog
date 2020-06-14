@@ -31,7 +31,6 @@ def checkFileSize(filelog):
             print("check1")
         time.sleep(1)
 
-
 def process(filelog,fileblacklist):
     global flag
     blackList = []
@@ -59,7 +58,7 @@ def process(filelog,fileblacklist):
                 s = re.findall(r'[0-9]+(?:\.[0-9]+){3}', line[:100])[0]
                 if(len(s)>3):
                     if(blackList.count(s)):
-                        print(f"{bcolors.WARNING}"+s)
+                        print(f"{bcolors.WARNING}Phat hien IP: '"+f"{bcolors.FAIL}"+s+f"{bcolors.WARNING}' nam trong blacklist")
         file.close()
         time.sleep(3)    
     
