@@ -4,11 +4,11 @@ import re
 import requests
 import json
 import sys
-import time
+import time as tm
+import datetime
 from pathlib import Path
 import argparse
 flag = None
-fileSize = None
 
 class bcolors:
     HEADER = '\033[95m'
@@ -19,22 +19,30 @@ class bcolors:
     ENDC = '\033[0m'
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
+months={'Jan': 1,'Feb': 2,'Mar' : 3,'Apr' : 4,'May' : 5,'Jun' : 6,'Jul' : 7,'Aug' : 8,'Sep' : 9,'Oct' : 10,'Nov' : 11,'Dec' : 12}
 
+def checkSpam(filelog):
+    print(1)
+    
+def coverTime(str):
+    #13/Jun/2020:10:29:54
+    global month
+    day= int(re.search('\d{2}\/',str).group()[:2])
+    month=months[re.search('\/[a-zA-Z]+\/',str).group()[1:-1]]
+    year=int(re.search('\/\d{4}',str).group()[1:])
+    h,m,s=re.split('\:',str[-8:])
+    time=datetime.datetime(year,month,day,int(h),int(m),int(s))
+    return time
 
-def checkFileSize(filelog):
-    global flag
-    file_size_defaule=os.path.getsize(filelog)
-    while True:
-        if(os.path.getsize(filelog) != file_size_defaule):
-            file_size_defaule=os.path.getsize(filelog)
-            flag=1
-            print("check1")
-        time.sleep(1)
-
+def subTime(t1,t2):
+    time=t1-t2
+    return time.total_seconds()
 def process(filelog,fileblacklist):
     global flag
-    blackList = []
+    setIp=set()
+    listIp=dict()
     
+    blackList = []
     path = Path(filelog)
     path_bl = Path(fileblacklist)
     with open(path_bl, "r") as file:
@@ -56,11 +64,27 @@ def process(filelog,fileblacklist):
             pointer_current=file.tell()
             if(len(line)>1):
                 s = re.findall(r'[0-9]+(?:\.[0-9]+){3}', line[:100])[0]
-                if(len(s)>3):
+                t = re.findall(r'\d{2}\/[a-zA-Z]+\/\d{4}\:\d{2}\:\d{2}\:\d{2}', line[:100])[0]
+                if( s in listIp.keys()):
+                    listIp[s]['num']+=1
+                    if(t not in listIp[s]['datetime'] ):
+                        listIp[s]['datetime'].append(t)
+                else:
+                    listIp[s]=dict()
+                    listIp[s]['num']=1
+                    listIp[s]['datetime']=list()
+                    listIp[s]['datetime'].append(t)
+                    if(len(t)>1):
+                        print(t)
+                        print(s)
+                        listIp[s]['inital']=coverTime(str(t))
+                        
+                
+                if(len(s)>3 and len(t)>3):
                     if(blackList.count(s)):
-                        print(f"{bcolors.WARNING}Phat hien IP: '"+f"{bcolors.FAIL}"+s+f"{bcolors.WARNING}' khong tot vao luc: ("+time.asctime()+")")
+                        print(f"{bcolors.WARNING}Phat hien IP: '"+f"{bcolors.FAIL}"+s+f"{bcolors.WARNING}' khong tot vao luc: ("+str(coverTime(t))+")")
         file.close()
-        time.sleep(3)    
+        tm.sleep(2)    
     
 if __name__=="__main__":
     paser = argparse.ArgumentParser()
