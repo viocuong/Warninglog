@@ -3,13 +3,15 @@ import os
 import re
 import requests
 import json
-import sys
 import time as tm
 import datetime
 from pathlib import Path
 import argparse
+import keyboard
+import matplotlib.pyplot as plt
+import numpy as np
 flag = None
-
+listIp=dict()
 class bcolors:
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'
@@ -21,9 +23,16 @@ class bcolors:
     UNDERLINE = '\033[4m'
 months={'Jan': 1,'Feb': 2,'Mar' : 3,'Apr' : 4,'May' : 5,'Jun' : 6,'Jul' : 7,'Aug' : 8,'Sep' : 9,'Oct' : 10,'Nov' : 11,'Dec' : 12}
 
-def checkSpam(filelog):
-    print(1)
-    
+def checkSpam(ip):
+    global listIp
+    mark= [1]*listIp[ip]['num']
+    for i in range(1,listIp[ip]['num']):
+        ti = (listIp[ip]['datetime'][i]-listIp[ip]['datetime'][i-1]).total_seconds()
+        if(ti < 2):
+            mark[i]=mark[i-1]+1
+    print(mark[listIp[ip]['num']-1])
+    return mark[listIp[ip]['num']-1]>4
+        
 def coverTime(str):
     #13/Jun/2020:10:29:54
     global month
@@ -37,10 +46,24 @@ def coverTime(str):
 def subTime(t1,t2):
     time=t1-t2
     return time.total_seconds()
+
+def charting():
+    print('------')
+
+def process2():
+    while(True):
+        if(keyboard.is_pressed('delete')):
+            try:
+                print('Nhap thoi gian muon xem tinh toi thoi diem hien tai: ')
+                t= float(input())
+                T= datetime.datetime.now()
+            except:
+                print('Thoi gian la phut, nhap so thuc')
+            
 def process(filelog,fileblacklist):
     global flag
     setIp=set()
-    listIp=dict()
+    global listIp
     
     blackList = []
     path = Path(filelog)
@@ -51,13 +74,11 @@ def process(filelog,fileblacklist):
             blackList.append(re.findall(r'[0-9]+(?:\.[0-9]+){3}', i)[0])
     # response=requests.get("http://api.antideo.com/ip/health/27.69.63.222")
     # print(response.json())
-    
     pointer_current=0
     while True:
         file = open(path, "r+")
         file.seek(pointer_current)
         line = file.readline()
-        ## Nếu đọc hết file chờ cho đến khi file log được cập nhật thêm
         if( not line):
             continue
         else:
@@ -68,23 +89,26 @@ def process(filelog,fileblacklist):
                 if( s in listIp.keys()):
                     listIp[s]['num']+=1
                     if(t not in listIp[s]['datetime'] ):
-                        listIp[s]['datetime'].append(t)
+                        listIp[s]['datetime'].append(coverTime(t))
                 else:
                     listIp[s]=dict()
                     listIp[s]['num']=1
                     listIp[s]['datetime']=list()
-                    listIp[s]['datetime'].append(t)
+                    listIp[s]['datetime'].append(coverTime(t))
+                    listIp[s]['inBlackList']=False
                     if(len(t)>1):
                         print(t)
                         print(s)
                         listIp[s]['inital']=coverTime(str(t))
                         
-                
+                if(checkSpam(s)):
+                    print(f"{bcolors.FAIL}'"+s+"' dang spam cuc manh")
                 if(len(s)>3 and len(t)>3):
                     if(blackList.count(s)):
+                        listIp[s]['inBlackList']=True
                         print(f"{bcolors.WARNING}Phat hien IP: '"+f"{bcolors.FAIL}"+s+f"{bcolors.WARNING}' khong tot vao luc: ("+str(coverTime(t))+")")
         file.close()
-        tm.sleep(2)    
+        tm.sleep(1)    
     
 if __name__=="__main__":
     paser = argparse.ArgumentParser()
@@ -93,8 +117,11 @@ if __name__=="__main__":
     paser.add_argument('-fbl', "--fileblacklist",
                        help="file blacklist", required=True)
     args = paser.parse_args()
-    process(args.filelog,args.fileblacklist)
-    # t1=threading.Thread(target = checkFileSize ,args=(args.filelog,))
-    # t2 = threading.Thread(target = process,args=(args.filelog,args.fileblacklist))
-    # t2.start()
+    t1=threading.Thread(target = process2)
+    
+    #process(args.filelog,args.fileblacklist)
+    #t1.start
+    t2 = threading.Thread(target = process,args=(args.filelog,args.fileblacklist))
+    t1.start()
+    t2.start()
     # t1.start()
