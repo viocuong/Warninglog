@@ -30,7 +30,6 @@ def checkSpam(ip):
         ti = (listIp[ip]['datetime'][i]-listIp[ip]['datetime'][i-1]).total_seconds()
         if(ti < 2):
             mark[i]=mark[i-1]+1
-    print(mark[listIp[ip]['num']-1])
     return mark[listIp[ip]['num']-1]>4
         
 def coverTime(str):
@@ -72,8 +71,7 @@ def process(filelog,fileblacklist):
         listbl = file.readlines()
         for i in listbl:
             blackList.append(re.findall(r'[0-9]+(?:\.[0-9]+){3}', i)[0])
-    # response=requests.get("http://api.antideo.com/ip/health/27.69.63.222")
-    # print(response.json())
+    
     pointer_current=0
     while True:
         file = open(path, "r+")
@@ -97,16 +95,19 @@ def process(filelog,fileblacklist):
                     listIp[s]['datetime'].append(coverTime(t))
                     listIp[s]['inBlackList']=False
                     if(len(t)>1):
-                        print(t)
-                        print(s)
                         listIp[s]['inital']=coverTime(str(t))
-                        
                 if(checkSpam(s)):
                     print(f"{bcolors.FAIL}'"+s+"' dang spam cuc manh")
                 if(len(s)>3 and len(t)>3):
                     if(blackList.count(s)):
                         listIp[s]['inBlackList']=True
                         print(f"{bcolors.WARNING}Phat hien IP: '"+f"{bcolors.FAIL}"+s+f"{bcolors.WARNING}' khong tot vao luc: ("+str(coverTime(t))+")")
+                    else:
+                        response=requests.get("http://api.antideo.com/ip/health/"+s).json()
+                        for i in response['health']:
+                            if(response['health'][i]):
+                                listIp[s]['inBlackList']=True
+                                print(f"{bcolors.WARNING}Phat hien IP: '"+f"{bcolors.FAIL}"+s+f"{bcolors.WARNING}' khong tot vao luc: ("+str(coverTime(t))+")")
         file.close()
         tm.sleep(1)    
     
